@@ -1,6 +1,10 @@
 # UMITSMDP
 Auto-Captioning
 
+## Installation
+
+Please Download the plugin .zip file on the release page, and open your wordpress website->plugin->install plugin
+
 ## Trouble Shot
 If the normal installation doesn't work, please check the following for troube shot:
 
