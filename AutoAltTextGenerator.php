@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: AutoAltTextGenerator
-Description: Places alt text when clicking regenerate
+Description: Generates default alt text when uploading image. Regenerate alt text by adding a feedback prompt.
 Version: 1.0
 Author: UMITS
 */
@@ -155,6 +155,8 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
     6. Avoid repetition. Don't repeat what's already in the article.
     7. Be factual and avoid extrapolations
     8. Do not begin with \"Alt text:\"
+    9. Do not make any inferences or suggestions. ex- don't say \"this shows/means/suggests ...\". You can use outside information to identify logos, people, or products, but do not add context or descriptions that can not be seen from the image.
+    10. If there is a clear focus on a person, add more detail on physical features.
     Exception: Add more detail when the image is the main content focus.";
 
     if ($prevAltText != null) {
