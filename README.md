@@ -6,7 +6,7 @@ Auto-Captioning
 Please Download the plugin .zip file on the release page, and open your wordpress website->plugin->install plugin
 
 ## Trouble Shot
-If the normal installation doesn't work, please check the following for troube shot:
+If the normal installation doesn't work, please check the following for trouble shot:
 
 Install [php package manager](https://getcomposer.org/) first and then run at this directory with the commandline
 ```bash
