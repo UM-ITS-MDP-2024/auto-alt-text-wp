@@ -14,17 +14,52 @@ function Regen($form_fields, $post) {
     $customAltText = get_post_meta($post->ID, '_wp_attachment_image_alt', true); // Get the existing alt text
     $image_url = wp_get_attachment_url($post->ID);
 
-    $form_fields['custom_alt_text'] = array(
-        'label' => 'UMITS',
-        'input' => 'html',
-        'html' => '<div>' .
-                  '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
-                  '<input type="text" id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here">' .
-                  '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here"></textarea>' .
-                  '<button class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
-                  '<button class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
-                  '</div>',
-    );
+    // Get the current URL
+    $current_url = $_SERVER['REQUEST_URI'];
+
+    // Check if the User is on the edit page
+    if (strpos($current_url, 'wp-admin/post.php') !== false && strpos($current_url, 'action=edit') !== false) {
+        $form_fields['custom_alt_text'] = array(
+            'label' => 'UMITS',
+            'input' => 'html',
+            'html' => '<div style="width: 220%;">' . // Enlarge the box to fit page
+                      '<div>' .
+                      '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
+                      '</div>' .
+                      '<div>' .
+                      '<input type="text"  id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here" style="width: 100%;">' .
+                      '</div>' .
+                      '<div>' .
+                      '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here" style="width: 100%;"></textarea>' .
+                      '</div>' .
+                      '<div>' .
+                      '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
+                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
+                      '</div>' .
+                      '</div>',
+        );
+    } else {
+        // Original HTML
+        $form_fields['custom_alt_text'] = array(
+            'label' => 'UMITS',
+            'input' => 'html',
+            'html' => '<div>' .
+                      '<div>' .
+                      '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
+                      '</div>' .
+                      '<div>' .
+                      '<input type="text"  id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here" style="width: 100%;">' .
+                      '</div>' .
+                      '<div>' .
+                      '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here" style="width: 100%;"></textarea>' .
+                      '</div>' .
+                      '<div>' .
+                      '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
+                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
+                      '</div>' .
+                      '</div>',
+        );
+    }
 
     return $form_fields;
 }
@@ -91,7 +126,11 @@ function custom_admin_js() {
                         if ($('#attachment-details-two-column-alt-text').length) {
                             $('#attachment-details-two-column-alt-text').val(response.data.altText);
                             $('#attachment-details-two-column-alt-text').focus();
-                        } else {
+                        }
+                       else if ($('#attachment_alt').length) {
+                            $('#attachment_alt').val(response.data.altText);
+                            $('#attachment_alt').focus();
+                       } else {
                             $('#attachment-details-alt-text').val(response.data.altText);
                             $('#attachment-details-alt-text').focus();
                         }
