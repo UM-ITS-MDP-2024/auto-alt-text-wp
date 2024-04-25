@@ -34,7 +34,7 @@ function Regen($form_fields, $post) {
                       '</div>' .
                       '<div>' .
                       '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
-                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
+                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Save</button>' .
                       '</div>' .
                       '</div>',
         );
@@ -55,7 +55,7 @@ function Regen($form_fields, $post) {
                       '</div>' .
                       '<div>' .
                       '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
-                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
+                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Save</button>' .
                       '</div>' .
                       '</div>',
         );
