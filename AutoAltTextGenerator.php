@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: AutoAltTextGenerator
-Description: Generates default alt text when uploading image. Regenerate alt text by adding a feedback prompt.
-Version: 1.0
+Description: Places alt text when clicking regenerate
+Version: 1.1
 Author: UMITS
 */
 
@@ -14,52 +14,17 @@ function Regen($form_fields, $post) {
     $customAltText = get_post_meta($post->ID, '_wp_attachment_image_alt', true); // Get the existing alt text
     $image_url = wp_get_attachment_url($post->ID);
 
-    // Get the current URL
-    $current_url = $_SERVER['REQUEST_URI'];
-
-    // Check if the User is on the edit page
-    if (strpos($current_url, 'wp-admin/post.php') !== false && strpos($current_url, 'action=edit') !== false) {
-        $form_fields['custom_alt_text'] = array(
-            'label' => 'UMITS',
-            'input' => 'html',
-            'html' => '<div style="width: 220%;">' . // Enlarge the box to fit page
-                      '<div>' .
-                      '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
-                      '</div>' .
-                      '<div>' .
-                      '<input type="text"  id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here" style="width: 100%;">' .
-                      '</div>' .
-                      '<div>' .
-                      '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here" style="width: 100%;"></textarea>' .
-                      '</div>' .
-                      '<div>' .
-                      '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
-                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Save</button>' .
-                      '</div>' .
-                      '</div>',
-        );
-    } else {
-        // Original HTML
-        $form_fields['custom_alt_text'] = array(
-            'label' => 'UMITS',
-            'input' => 'html',
-            'html' => '<div>' .
-                      '<div>' .
-                      '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
-                      '</div>' .
-                      '<div>' .
-                      '<input type="text"  id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here" style="width: 100%;">' .
-                      '</div>' .
-                      '<div>' .
-                      '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here" style="width: 100%;"></textarea>' .
-                      '</div>' .
-                      '<div>' .
-                      '<button type="button" class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
-                      '<button type="button" class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Save</button>' .
-                      '</div>' .
-                      '</div>',
-        );
-    }
+    $form_fields['custom_alt_text'] = array(
+        'label' => 'UMITS',
+        'input' => 'html',
+        'html' => '<div>' .
+                  '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
+                  '<input type="text" id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here">' .
+                  '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here"></textarea>' .
+                  '<button class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
+                  '<button class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
+                  '</div>',
+    );
 
     return $form_fields;
 }
@@ -126,11 +91,7 @@ function custom_admin_js() {
                         if ($('#attachment-details-two-column-alt-text').length) {
                             $('#attachment-details-two-column-alt-text').val(response.data.altText);
                             $('#attachment-details-two-column-alt-text').focus();
-                        }
-                       else if ($('#attachment_alt').length) {
-                            $('#attachment_alt').val(response.data.altText);
-                            $('#attachment_alt').focus();
-                       } else {
+                        } else {
                             $('#attachment-details-alt-text').val(response.data.altText);
                             $('#attachment-details-alt-text').focus();
                         }
@@ -182,7 +143,7 @@ function assign_generated_alt_text($attachment_id) {
  */
 function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack = null) {
     // Fixed API key and prompt within the function
-    $apiKey = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : null;
+    $apiKey = defined('AZURE_API_KEY') ? AZURE_API_KEY : null;
     $prompt = "
     Create alt text for an image, following WCAG guidelines and SEO.
     You should be able to make reasonable inference for the characters, locations, date, times, objects, etc. in the image and associate them with the context.
@@ -194,8 +155,6 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
     6. Avoid repetition. Don't repeat what's already in the article.
     7. Be factual and avoid extrapolations
     8. Do not begin with \"Alt text:\"
-    9. Do not make any inferences or suggestions. ex- don't say \"this shows/means/suggests ...\". You can use outside information to identify logos, people, or products, but do not add context or descriptions that can not be seen from the image.
-    10. If there is a clear focus on a person, add more detail on physical features.
     Exception: Add more detail when the image is the main content focus.";
 
     if ($prevAltText != null) {
@@ -209,11 +168,18 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
         $prompt .= $feedBack;
     }
 
-    $client = OpenAI::client($apiKey);
+    $model = 'gpt-4o';
+
+    $client = OpenAI::factory()
+    ->withBaseUri(defined('AZURE_API_BASE') ? AZURE_API_BASE . '/openai/deployments/' . $model : null)
+    ->withHttpHeader('api-key', $apiKey)
+    ->withQueryParam('api-version', defined('API_VERSION') ? API_VERSION : null)
+    ->withOrganization(defined('OPENAI_ORGANIZATION') ? OPENAI_ORGANIZATION : null)
+    ->make();
 
     try {
         $result = $client->chat()->create([
-            'model' => 'gpt-4-vision-preview', // Specify the model you wish to use
+            'model' => $model,
             'messages' => [
                 ['role' => 'system', 
                 'content' => [
@@ -224,7 +190,7 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
                 ['role' => 'user', 
                 'content' => [
                     ['type' => 'image_url',
-                    'image_url' => $imageUrl],
+                    'image_url' => ['url' => $imageUrl]],
                 ]
                 ]
             ],
