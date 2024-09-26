@@ -145,17 +145,17 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
     // Fixed API key and prompt within the function
     $apiKey = defined('AZURE_API_KEY') ? AZURE_API_KEY : null;
     $prompt = "
-    Create alt text for an image, following WCAG guidelines and SEO.
-    You should be able to make reasonable inference for the characters, locations, date, times, objects, etc. in the image and associate them with the context.
-    1. Be concise
-    2. Use correct grammar
-    3. Use keywords sparingly
-    4. Include relevant image text
-    5. Be clear and include necessary details 
-    6. Avoid repetition. Don't repeat what's already in the article.
-    7. Be factual and avoid extrapolations
-    8. Do not begin with \"Alt text:\"
-    Exception: Add more detail when the image is the main content focus.";
+    Create alt text for an image, following WCAG guidelines, that is 2-3 sentences or 125 characters long.  
+    Make reasonable inferences only when identifying well-known characters, locations, objects, or text that are clearly visible in the image. 
+    Do not infer emotions, intentions, or any contextual meaning not directly observable in the image.
+    1. Begin by describing the main subject, followed by key details, and conclude with visible contextual elements.
+    2. Include relevant image text verbatim if it's integral to understanding the image.
+    3. Be clear and include necessary details without over-describing.
+    4. Avoid repetition and redundancy.
+    5. Do not make inferences or suggestions (e.g., don't say 'this shows/means/suggests...').
+    6. Do not begin with 'Alt text:'.
+    7. Incorporate keywords directly relevant to the image's primary content; avoid keyword stuffing (1-2 keywords max).";
+
 
     if ($prevAltText != null) {
         $prompt .= "Please generate new alt text based on previous alt text and user feedback.\n";
