@@ -145,7 +145,7 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
     // Fixed API key and prompt within the function
     $apiKey = defined('AZURE_API_KEY') ? AZURE_API_KEY : null;
     $prompt = "
-    Create alt text for an image, following WCAG guidelines, that is 2-3 sentences or 125 characters long.  
+    Create alt text for an image, following WCAG guidelines, at most 125 characters long.  
     Make reasonable inferences only when identifying well-known characters, locations, objects, or text that are clearly visible in the image. 
     Do not infer emotions, intentions, or any contextual meaning not directly observable in the image.
     1. Begin by describing the main subject, followed by key details, and conclude with visible contextual elements.
