@@ -1,6 +1,4 @@
 <?php
-// handler.php
-
 add_action('wp_ajax_updatethealttext', 'update_alt_text_callback');
 
 function update_alt_text_callback() {
@@ -34,13 +32,11 @@ function update_alt_text_callback() {
     // Encode the image to base64
     $imageUrl = encodeImageToDataURL($attachment, $imagePath);
 
-    $new_alt_text = generateAltText($imageUrl, 1, $prevAltText, $feedback);
-
-    
+    $new_alt_text_array = generateAltText($imageUrl, 1, $prevAltText, $feedback);
+    $new_alt_text = is_array($new_alt_text_array) ? $new_alt_text_array[0] : '';
 
     // Update post meta
-   
-    $success_message = 'generated new text';
+    $success_message = 'Generated new alt text';
     $response_data = array(
             'altText' => $new_alt_text, // Include the new alt text in the response data
             'image_url' => $photo_url,
@@ -69,7 +65,6 @@ function push_changes() {
     // Get data from the AJAX request
     $attachment_id = isset($_POST['attachment_id']) ? intval($_POST['attachment_id']) : 0;
     $new_alt_text = isset($_POST['newVal']) ? sanitize_text_field(stripslashes($_POST['newVal'])) : '';
-
 
     // Update post meta
     update_post_meta($attachment_id, '_wp_attachment_image_alt', $new_alt_text);

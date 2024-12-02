@@ -3,13 +3,7 @@ Auto-Captioning
 
 ## Note
 
-This plugin uses Azure OpenAI service, please add those defined variables to `wp-config.php` file in wordpress directory
-
-```
-define( 'AZURE_API_BASE', 'YOUR_BASE_URL_HRERE' ); // example: https://api.umgpt.umich.edu/azure-openai-api
-define( 'AZURE_API_KEY', 'YOUR_KEY_HERE' ); 
-define( 'OPENAI_ORGANIZATION', 'YOUR_ORGANIZATION_HERE' );
-define( 'API_VERSION', 'API_VERSION_HERE' ); // example: 2024-06-01
+This plugin can switch between OpenAI and Azure OpenAI service, you can edit the settings on the setting page.
 ```
 
 ## Installation

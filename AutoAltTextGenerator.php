@@ -9,6 +9,18 @@ Author: UMITS
 require_once __DIR__ . '/vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'includes/handler.php';
 
+// Define the default prompt.
+define('DEFAULT_PROMPT', "Create alt text for an image, following WCAG guidelines, at most 125 characters long.
+Make reasonable inferences only when identifying well-known characters, locations, objects, or text that are clearly visible in the image.
+Do not infer emotions, intentions, or any contextual meaning not directly observable in the image.
+1. Begin by describing the main subject, followed by key details, and conclude with visible contextual elements.
+2. Include relevant image text verbatim if it's integral to understanding the image.
+3. Be clear and include necessary details without over-describing.
+4. Avoid repetition and redundancy.
+5. Do not make inferences or suggestions (e.g., don't say 'this shows/means/suggests...').
+6. Do not begin with 'Alt text:'.
+7. Incorporate keywords directly relevant to the image's primary content; avoid keyword stuffing (1-2 keywords max).");
+
 function Regen($form_fields, $post) {
     // Add custom alt text options
     $customAltText = get_post_meta($post->ID, '_wp_attachment_image_alt', true); // Get the existing alt text
@@ -20,7 +32,7 @@ function Regen($form_fields, $post) {
         'html' => '<div>' .
                   '<label for="attachments-' . $post->ID . '-custom_alt_text">Regenerate</label>' .
                   '<input type="text" id="umits_alt_text_feedback" name="feedback" value="" placeholder="Add feedback here">' .
-                  '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text appear here"></textarea>' .
+                  '<textarea type="text" id="umits_alt_text_regen_text" name="regen_text" value="" placeholder="Regenerated alt text will appear here"></textarea>' .
                   '<button class="button regenerate-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Regenerate</button>' .
                   '<button class="button commit-alt-text" data-attachment-id="' . $post->ID . '" data-image-url="' . $image_url . '">Commit</button>' .
                   '</div>',
@@ -65,7 +77,7 @@ function custom_admin_js() {
                     success: function(response) {
                         $('#umits_alt_text_regen_text').val(response.data.altText);
                         regenTextarea.attr('placeholder', originalPlaceholder);
-                        console.log('generated new alt text');
+                        console.log('Generated new alt text');
                     },
                     error: function(xhr, status, error) {
                         console.error('Error updating alt text: ' + error);
@@ -142,40 +154,40 @@ function assign_generated_alt_text($attachment_id) {
  * @return array An array of alt text options.
  */
 function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack = null) {
-    // Fixed API key and prompt within the function
-    $apiKey = defined('AZURE_API_KEY') ? AZURE_API_KEY : null;
-    $prompt = "
-    Create alt text for an image, following WCAG guidelines, at most 125 characters long.  
-    Make reasonable inferences only when identifying well-known characters, locations, objects, or text that are clearly visible in the image. 
-    Do not infer emotions, intentions, or any contextual meaning not directly observable in the image.
-    1. Begin by describing the main subject, followed by key details, and conclude with visible contextual elements.
-    2. Include relevant image text verbatim if it's integral to understanding the image.
-    3. Be clear and include necessary details without over-describing.
-    4. Avoid repetition and redundancy.
-    5. Do not make inferences or suggestions (e.g., don't say 'this shows/means/suggests...').
-    6. Do not begin with 'Alt text:'.
-    7. Incorporate keywords directly relevant to the image's primary content; avoid keyword stuffing (1-2 keywords max).";
+    // Load settings
+    $service = get_option('umits_service_selection', 'openai');
 
+    if ($service == 'openai') {
+        $apiKey = get_option('umits_openai_api_key');
+        $prompt = get_option('umits_openai_prompt', DEFAULT_PROMPT);
+    } else {
+        $apiKey = get_option('umits_azure_api_key');
+        $prompt = get_option('umits_azure_prompt', DEFAULT_PROMPT);
+    }
 
     if ($prevAltText != null) {
-        $prompt .= "Please generate new alt text based on previous alt text and user feedback.\n";
-        $prompt .= "Previous generated alt text: \n";
-        $prompt .= $prevAltText;
+        $prompt .= "\n\nNow please regenerate another alt text based on the previous alt text and feedback (if there is no feedback, just generate a different one).\n\nPrevious alt text: \n$prevAltText\n";
     }
-    
+
     if ($feedBack != null) {
-        $prompt .= "User feedback for alt text: \n";
-        $prompt .= $feedBack;
+        $prompt .= "User feedback for alt text: \n$feedBack\n";
     }
 
     $model = 'gpt-4o';
 
-    $client = OpenAI::factory()
-    ->withBaseUri(defined('AZURE_API_BASE') ? AZURE_API_BASE . '/openai/deployments/' . $model : null)
-    ->withHttpHeader('api-key', $apiKey)
-    ->withQueryParam('api-version', defined('API_VERSION') ? API_VERSION : null)
-    ->withOrganization(defined('OPENAI_ORGANIZATION') ? OPENAI_ORGANIZATION : null)
-    ->make();
+    if ($service == 'openai') {
+        $client = OpenAI::client($apiKey);
+    } elseif ($service == 'azure_openai') {
+        $client = OpenAI::factory()
+        ->withBaseUri(get_option('umits_azure_api_base') . '/openai/deployments/' . $model)
+        ->withHttpHeader('api-key', $apiKey)
+        ->withQueryParam('api-version', get_option('umits_azure_api_version'))
+        ->withOrganization(get_option('umits_azure_organization'))
+        ->make();
+    } else {
+        error_log('Invalid service selected.');
+        return ['Invalid service selected'];
+    }
 
     try {
         $result = $client->chat()->create([
@@ -199,11 +211,11 @@ function generateAltText($imageUrl, $option = 1, $prevAltText = null, $feedBack 
             'temperature' => 0.3
         ]);
 
-        $messagge = [];
+        $messages = [];
         for ($i = 0; $i < count($result->choices); $i++) {
-            $messagge[] = $result->choices[$i]->message->content;
+            $messages[] = $result->choices[$i]->message->content;
         }
-        return $messagge;
+        return $messages;
     } catch (\Exception $e) {
         error_log($e);
         return [$e->getMessage()];
@@ -222,4 +234,145 @@ function encodeImageToDataURL($attachment, $imagePath) {
     }
 }
 
+// Add settings page
+add_action('admin_menu', 'umits_add_settings_page');
+
+function umits_add_settings_page() {
+    add_options_page(
+        'Auto Alt Text Generator Settings', // Page title
+        'Auto Alt Text', // Menu title
+        'manage_options', // Capability
+        'umits-alt-text-settings', // Menu slug
+        'umits_render_settings_page' // Function to display the page
+    );
+}
+
+add_action('admin_init', 'umits_register_settings');
+
+function umits_register_settings() {
+    register_setting('umits_alt_text_settings_group', 'umits_service_selection');
+    register_setting('umits_alt_text_settings_group', 'umits_openai_api_key');
+    register_setting('umits_alt_text_settings_group', 'umits_openai_prompt');
+    register_setting('umits_alt_text_settings_group', 'umits_azure_api_base');
+    register_setting('umits_alt_text_settings_group', 'umits_azure_api_key');
+    register_setting('umits_alt_text_settings_group', 'umits_azure_organization');
+    register_setting('umits_alt_text_settings_group', 'umits_azure_api_version');
+    register_setting('umits_alt_text_settings_group', 'umits_azure_prompt');
+}
+
+function umits_render_settings_page() {
+    // Retrieve current settings
+    $service_selection = get_option('umits_service_selection', 'openai');
+    $openai_api_key = get_option('umits_openai_api_key');
+    $azure_api_key = get_option('umits_azure_api_key');
+
+    // Placeholder texts
+    $openai_api_key_placeholder = $openai_api_key ? 'Current API key is set' : 'API key is not set';
+    $azure_api_key_placeholder = $azure_api_key ? 'Current API key is set' : 'API key is not set';
+    ?>
+    <div class="wrap">
+        <h1>Auto Alt Text Generator Settings</h1>
+        <form method="post" action="options.php">
+            <?php
+            settings_fields('umits_alt_text_settings_group');
+            do_settings_sections('umits-alt-text-settings');
+            ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">Choose AI Service</th>
+                    <td>
+                        <select name="umits_service_selection" id="umits_service_selection">
+                            <option value="openai" <?php selected($service_selection, 'openai'); ?>>OpenAI</option>
+                            <option value="azure_openai" <?php selected($service_selection, 'azure_openai'); ?>>Azure OpenAI</option>
+                        </select>
+                    </td>
+                </tr>
+                <!-- OpenAI Settings -->
+                <tbody id="umits_openai_settings" <?php if ($service_selection != 'openai') echo 'style="display:none;"'; ?>>
+                <tr valign="top">
+                    <th scope="row">OpenAI API Key</th>
+                    <td>
+                        <input type="password" name="umits_openai_api_key" value="" size="50" autocomplete="off" placeholder="<?php echo esc_attr($openai_api_key_placeholder); ?>" />
+                        <p class="description">Leave empty to keep the current API key.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Predefined OpenAI Prompt</th>
+                    <td>
+                        <textarea name="umits_openai_prompt" rows="10" cols="50"><?php echo esc_textarea(get_option('umits_openai_prompt', DEFAULT_PROMPT)); ?></textarea>
+                        <br>
+                        <button type="button" id="restore_openai_prompt" class="button">Restore Default Prompt</button>
+                        <p class="description">Define the prompt for OpenAI requests.</p>
+                    </td>
+                </tr>
+                </tbody>
+                <!-- Azure OpenAI Settings -->
+                <tbody id="umits_azure_settings" <?php if ($service_selection != 'azure_openai') echo 'style="display:none;"'; ?>>
+                <tr valign="top">
+                    <th scope="row">Azure API Base URL</th>
+                    <td>
+                        <input type="text" name="umits_azure_api_base" value="<?php echo esc_attr(get_option('umits_azure_api_base')); ?>" size="50" placeholder="e.g., https://api.example.com/azure-openai-api" />
+                        <p class="description">Example: https://api.example.com/azure-openai-api</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Azure API Key</th>
+                    <td>
+                        <input type="password" name="umits_azure_api_key" value="" size="50" autocomplete="off" placeholder="<?php echo esc_attr($azure_api_key_placeholder); ?>" />
+                        <p class="description">Leave empty to keep the current API key.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Azure OpenAI Organization</th>
+                    <td>
+                        <input type="text" name="umits_azure_organization" value="<?php echo esc_attr(get_option('umits_azure_organization')); ?>" size="50" placeholder="Your Azure OpenAI organization ID" />
+                        <p class="description">Define your Azure OpenAI organization.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Azure API Version</th>
+                    <td>
+                        <input type="text" name="umits_azure_api_version" value="<?php echo esc_attr(get_option('umits_azure_api_version')); ?>" size="50" placeholder="e.g., 2024-06-01" />
+                        <p class="description">Example: 2024-06-01</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Predefined Azure OpenAI Prompt</th>
+                    <td>
+                        <textarea name="umits_azure_prompt" rows="10" cols="50"><?php echo esc_textarea(get_option('umits_azure_prompt', DEFAULT_PROMPT)); ?></textarea>
+                        <br>
+                        <button type="button" id="restore_azure_prompt" class="button">Restore Default Prompt</button>
+                        <p class="description">Define the prompt for Azure OpenAI requests.</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <script type="text/javascript">
+        (function($) {
+            $('#umits_service_selection').change(function() {
+                if ($(this).val() == 'openai') {
+                    $('#umits_openai_settings').show();
+                    $('#umits_azure_settings').hide();
+                } else if ($(this).val() == 'azure_openai') {
+                    $('#umits_openai_settings').hide();
+                    $('#umits_azure_settings').show();
+                }
+            }).trigger('change');
+
+            $('#restore_openai_prompt').click(function() {
+                var defaultPrompt = <?php echo json_encode(DEFAULT_PROMPT); ?>;
+                $('textarea[name="umits_openai_prompt"]').val(defaultPrompt);
+            });
+
+            $('#restore_azure_prompt').click(function() {
+                var defaultPrompt = <?php echo json_encode(DEFAULT_PROMPT); ?>;
+                $('textarea[name="umits_azure_prompt"]').val(defaultPrompt);
+            });
+        })(jQuery);
+    </script>
+    <?php
+}
 ?>
